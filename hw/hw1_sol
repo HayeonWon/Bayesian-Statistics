@@ -1,1 +1,85 @@
 
+#### Problem 1. Generate random numbers form a Student $t_v$ distribution $p(x)$ $\propto$ $(1+x^2/v)^{-(v+1)/2}$ where $v = 5$. Use the Metropolis-Hastings algorithm (5000 iterations) with the proposal distribution $X_{prop} ~ N(X^{(t)},\sigma^2)$. Your code/output must include ‘acceptance probability (i.e., # of accepted iterations / # of total iterations)’. Make sure that your acceptance probability is within (0.25, 0.5).
+  
+# Step 1. Choose a starting value and set the standard deviations $\sigma = 1, ... ,10$. 
+x <- NULL; accept_prob <- NULL;
+x[1] <- 1     # starting value
+sd <- c(1:10) # standard deviaions
+
+# Step 2. Compute the acceptance probability and Plot samples by drawing 5000 $\theta^*$ samples.
+par(mfrow=c(2,5))
+
+for(j in 1:10){
+  accept_iter <- 0
+  
+  for(i in 2:5000){
+    x_cur <- x[i-1]       # current value of x
+    x_prop <- rnorm(1,x_cur,sd[j])  # Jumping distribution 
+    
+    num <- (1 + x_prop^2/5)^(-6/2)  # numerator
+    den <- (1 + x_cur^2/5)^(-6/2)   # denominator
+    a <- min(num/den, 1)  # acceptance ratio
+    
+    if(runif(1,0,1) > a){
+      x[i] <- x_cur   # if runif > a, not accept
+      accept_iter <- accept_iter + 0} else{
+        x[i] <- x_prop  # if runif <= a, accept
+        accept_iter <- accept_iter + 1
+      }
+  }
+  
+  accept_prob[j] <- accept_iter/5000
+  print(paste("acceptance probability with s.d. = ", sd[j], "is", accept_prob[j]))
+  plot(x, xlab="Iterations", ylab=expression(x), main=paste("X with s.d =", sd[j]), type="l", las=1)
+}
+
+
+
+#### 2. Generate random numbers from the following target distribution $p(x)$ $\propto$$x^{-2.5}e^{-2/x}$. With two different proposal distributions ($\chi^2_2$ vs $\chi^2_10$), run the Metropolis-Hastings algorithm to draw samples. Check acceptance probabilities and plot samples(i.e., trace plots) (additional settings: 5000 total iterations, 2500 burn-in, thinning every 5th iterations).
+
+# Step 1. Choose a starting value and set the degrees of freedom 2 and 10.
+x <- NULL; accept_prob <- NULL; accept_iter <- NULL;
+x[1] <- 1       # starting variable
+df <- c(2, 10)  # degrees of freedom
+
+# Step 2. Compute the acceptance probability and Plot samples by drawing 5000 $\theta^*$ samples. (additional settings: 2500 burn-in and thinning every 5th iterations.)
+par(mfrow=c(1,2))
+
+for(j in 1:2){
+  for(i in 2:5000){
+    x_cur <- x[i-1]       # current value of x
+    x_prop <- rchisq(1,df[j]) # Jumping distribution 
+    
+    num <- x_prop^(-2.5)*exp(-2/x_prop) # numerator
+    den <- x_cur^(-2.5)*exp(-2/x_cur)   # denominator
+    a <- min(num/den, 1)  # acceptance ratio
+    
+    if(runif(1,0,1) > a){
+      x[i] <- x_cur   # if runif > a, not accept
+      accept_iter[i] <- 0} else{
+        x[i] <- x_prop  # if runif <= a, accept
+        accept_iter[i] <- 1
+      }
+  }
+  
+  # thinning
+  for(i in 1:5000){
+    if(i%%5!=0){
+      x[i] <- NA
+      accept_iter[i] <- NA} else{
+        x[i] <- x[i]
+        accept_iter[i] <- accept_iter[i]
+      }
+  }
+  
+  # burn-in
+  x <- na.omit(x[-c(1:2500)])
+  accept_iter <- na.omit(accept_iter[-c(1:2500)])
+  accept_prob[j] <- sum(accept_iter)/length(accept_iter)
+  
+  print(paste("acceptance probability with df = ", df[j], "is", accept_prob[j]))
+  plot(x, xlab="Iterations", ylab=expression(x), main=paste("X with df =", df[j]), type="l", las=1)
+}
+
+
+
