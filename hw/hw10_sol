@@ -1,0 +1,70 @@
+
+
+## (b) Load "data.RData" which includes Y (I x J matrix) where I=5 and J=20 and run the Gibbs sampler on the parameters of the model. Monitor cumulative averages. What do you find from this monitoring?
+
+### Step 1. Load the data.
+setwd("C:/Bayesian")
+load("data.RData")
+
+### Step 2. Set the starting values.
+I <- nrow(Y)
+J <- ncol(Y)
+
+al <- NULL
+be <- array(NA, dim=c(I, 50000))
+var_b <- NULL
+var_e <- NULL
+
+# starting values
+al[1] <- 0
+be[,1] <- rep(1:5)
+var_b <- 1
+var_e <- 1
+
+### Step 3. Sampling with 50000 iteratively.
+library(invgamma)
+
+for(j in 2:50000){
+  for(i in 1:5){
+    be[i,j] <- rnorm(1, var_b[j-1]*(sum(Y[i,])-J*al[j-1])/(J*var_b[j-1]+var_e[j-1]),
+                     sqrt(1/((J/var_e[j-1])+(1/var_b[j-1]))))
+  }
+  al[j] <- rnorm(1, sum(Y-be[,j])/(I*J), sqrt(var_e[j-1]/(I*J)))
+  var_b[j] <- rinvgamma(1, shape=I/2, rate=1/(sum(be[,j]^2)/2))
+  var_e[j] <- rinvgamma(1, shape=(I+J)/2, rate=1/(sum((Y-al[j]-be[,j])^2)/2))
+}
+
+### Step 4. Burn-in (first 40000 values).
+al <- al[-c(1:40000)]
+be <- be[,-c(1:40000)]
+var_b <- var_b[-c(1:40000)]
+var_e <- var_e[-c(1:40000)]
+
+### Step 5. Calculate cumulative averages.
+al_cumavg <- NULL
+be_cumavg <- array(NA, dim=c(I, 10000)); be_cumavg[,1] <- rep(1:5);
+var_b_cumavg <- NULL
+var_e_cumavg <- NULL
+
+
+for(k in 1:10000){
+  al_cumavg[k] <- mean(al[1:k])
+  var_b_cumavg[k] <- mean(var_b[1:k])
+  var_e_cumavg[k] <- mean(var_e[1:k])
+}
+for(k in 2:10000){
+  be_cumavg[,1] <- be[,1]
+  be_cumavg[,k] <- rowMeans(be[,1:k])
+}
+
+### Step 6. Plotting. 
+par(mfrow=c(2,4))
+plot(al_cumavg, type="l", main="alpha")
+for(i in 1:5){plot(be_cumavg[i,], col=i, type="l", main=paste("beta",i))}
+plot(var_b_cumavg, type="l", main="sigma^2_beta")
+plot(var_e_cumavg, type="l", main="sigma^2_epsilon")
+
+#### The cumulative average of $\alpha$ and $\beta$ have exactly opposite shapes. If $\alpha$'s decreases, then $\beta_i$'s increases. In contrast, if $\alpha$'s increases, then $\beta_i$'s decreases.
+
+
+#### The cumulative average of $\sigma^2_{\beta}$ and $\sigma^2_{\beta}$ converges.
