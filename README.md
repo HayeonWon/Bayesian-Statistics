@@ -1,2 +1,2 @@
-# R_practice
-Daily R practice
+# Smoothing Spline
+Homework
