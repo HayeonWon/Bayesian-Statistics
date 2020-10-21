@@ -1,0 +1,93 @@
+
+# Problem 1.
+
+set.seed(123)
+
+y <- c(28,8,-3,7,-1,1,18,12)
+sigma <- c(15,10,16,11,9,11,10,18)
+J <- length(y)
+
+eps <- 0.6
+L <- 10
+n.iter <- 5000
+
+a <- array(0,dim=c(1,J))
+
+## Step 1. Set the starting values of position & momentum.
+mom <- array(NA,dim=c(n.iter,J))
+pos <- array(NA,dim=c(n.iter,J))
+mu <- 10
+tau <- 2
+M <- diag(1:8)
+for (j in 1:J){ 
+  mom[1,j] <- rnorm(1,0,sqrt(M[j,j]))
+  pos[1,j] <- rnorm(1,mu,tau)
+}
+
+## Step 2. Declare the functions of gradient and posterior distribution.
+# gradient of log posterior density
+gradient <- function(x){
+  f <- NULL
+  for(j in 1:8){
+    f[j] <- (-(x[j]-mu)/tau^2) + ((y[j]-x[j])/sigma[j])
+  }
+  f
+}
+
+
+# posterior distribution
+posterior <- function(x){
+    f <- 1/sqrt(2*pi*(sigma[j]^2+tau^2))*exp(-1/(2*(sigma[j]^2+tau^2))
+                                             *(x-((y[j]+mu)/(1/sigma[j]^2+1/tau^2)))^2)
+    return(f)
+  }
+
+## Step 3. Run a HMC Markov chain (5000 iterations).
+for (i in 2:n.iter){
+  
+  for (k in 1:L){
+  # leapfrog steps
+  mom1 <- mom[i-1,] + 0.5*eps*gradient(pos[i-1,])
+  pos1 <- pos[i-1,] + eps*solve(M)%*% mom1
+  mom2 <- mom1 + 0.5*eps*gradient(pos1)
+  
+  pos_mom <- matrix(c(pos1, mom2), ncol=2)
+  }
+  
+  # acceptance rate
+  pos_prop <- pos_mom[seq_len(J)]
+  mom_prop <- pos_mom[-seq_len(J)]
+  
+  pos_cur <- pos[i-1,]
+  mom_cur <- mom[i-1,]
+  
+  for (j in 1:J){
+    num <- posterior(pos_prop[j]) * dnorm(mom_prop[j],0,sqrt(M[j,j]))
+    den <- posterior(pos_cur[j]) * dnorm(mom_cur[j],0,sqrt(M[j,j]))
+    
+    r <- num/den
+  
+    if(runif(1) < min(r,1)){
+      pos[i,j] <- pos_prop[j]
+      mom[i,j] <- mom_prop[j]; a[,j] <- a[,j]+1
+    }else{
+      pos[i,j] <- pos_cur[j]
+      mom[i,j] <- mom_cur[j]
+    }
+  }
+} 
+
+## Acceptance probability.
+a / 5000
+
+## Burn-in.
+pos_burn <- pos[-c(1:2500),]
+
+## Trace plots of $\alpha_j, j=1,\cdots,8$.
+par(mfrow=c(2,4))
+for(j in 1:J){
+  plot(pos_burn[,j], type="l", col=j, main=paste("alpha",j), xlab="iteraton", ylab="value")
+}
+
+### Comment :
+### It seems that parameters does not converge. It might result from the problem of parameters itself.
